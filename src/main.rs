@@ -58,10 +58,12 @@ fn handler(stream: &TcpStream) -> io::Result<()> {
             let version = read_var_int(&mut reader)?;
             let _address = read_string(&mut reader)?.unwrap_or("invalid".to_string());
             let _port = read_unsigned_short(&mut reader)?;
+            let state = read_var_int(&mut reader)?;
             println!("packet: handshake");
             println!("protocol version: {}", version);
             println!("server address: {}", _address);
             println!("server port: {}", _port);
+            println!("next state: {}", state);
         }
         // othors
         _ => println!("unknown packet: {}", packet_id),
