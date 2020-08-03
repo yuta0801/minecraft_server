@@ -38,6 +38,12 @@ fn read_string(
     Ok(String::from_utf8(buf))
 }
 
+fn read_unsigned_short(reader: &mut BufReader<&TcpStream>) -> io::Result<u16> {
+    let mut buf = [0; 2];
+    reader.read_exact(&mut buf)?;
+    Ok(((buf[0] as u16) << 8) + buf[1] as u16)
+}
+
 fn handler(stream: &TcpStream) -> io::Result<()> {
     let mut reader = BufReader::new(stream);
 
@@ -50,10 +56,12 @@ fn handler(stream: &TcpStream) -> io::Result<()> {
         // Handshake
         0x00 => {
             let version = read_var_int(&mut reader)?;
-            let address = read_string(&mut reader)?.unwrap_or("invalid".to_string());
+            let _address = read_string(&mut reader)?.unwrap_or("invalid".to_string());
+            let _port = read_unsigned_short(&mut reader)?;
             println!("packet: handshake");
             println!("protocol version: {}", version);
-            println!("server address: {}", address);
+            println!("server address: {}", _address);
+            println!("server port: {}", _port);
         }
         // othors
         _ => println!("unknown packet: {}", packet_id),
