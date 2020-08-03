@@ -1,6 +1,7 @@
 use std::io;
 use std::io::{BufReader, Read};
 use std::net::{TcpListener, TcpStream};
+use std::string;
 
 fn read_var_int(reader: &mut BufReader<&TcpStream>) -> io::Result<i32> {
     const MORE_FLAG: u8 = 0b10000000;
@@ -27,6 +28,16 @@ fn read_var_int(reader: &mut BufReader<&TcpStream>) -> io::Result<i32> {
     Ok(int)
 }
 
+// TODO: range check
+fn read_string(
+    reader: &mut BufReader<&TcpStream>,
+) -> io::Result<Result<String, string::FromUtf8Error>> {
+    let len = read_var_int(reader)? as usize;
+    let mut buf = vec![0; len];
+    reader.read_exact(&mut buf)?;
+    Ok(String::from_utf8(buf))
+}
+
 fn handler(stream: &TcpStream) -> io::Result<()> {
     let mut reader = BufReader::new(stream);
 
@@ -39,7 +50,10 @@ fn handler(stream: &TcpStream) -> io::Result<()> {
         // Handshake
         0x00 => {
             let version = read_var_int(&mut reader)?;
-            println!("packet: handshake, protocol version: {:?}", version);
+            let address = read_string(&mut reader)?.unwrap_or("invalid".to_string());
+            println!("packet: handshake");
+            println!("protocol version: {}", version);
+            println!("server address: {}", address);
         }
         // othors
         _ => println!("unknown packet: {}", packet_id),
