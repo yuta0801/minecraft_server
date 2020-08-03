@@ -1,12 +1,30 @@
 use std::io;
-use std::io::{Read, BufReader};
+use std::io::{BufReader, Read};
 use std::net::{TcpListener, TcpStream};
 
-// TODO: support multibyte int
 fn read_var_int(reader: &mut BufReader<&TcpStream>) -> io::Result<i32> {
-    let mut buf = [0];
-    reader.read_exact(&mut buf)?;
-    Ok(buf[0] as i32)
+    const MORE_FLAG: u8 = 0b10000000;
+    let mut int = 0i32;
+    let mut num_read = 0;
+
+    loop {
+        let mut buf = [0];
+        reader.read_exact(&mut buf)?;
+        let byte = buf[0];
+
+        int += ((byte & !MORE_FLAG) as i32) << (7 * num_read);
+
+        num_read += 1;
+        if num_read > 5 {
+            return Err(io::Error::new(io::ErrorKind::Other, "VarInt is too big"));
+        }
+
+        if byte & MORE_FLAG == 0 {
+            break;
+        }
+    }
+
+    Ok(int)
 }
 
 fn handler(stream: &TcpStream) -> io::Result<()> {
@@ -16,15 +34,15 @@ fn handler(stream: &TcpStream) -> io::Result<()> {
     let packet_id = read_var_int(&mut reader)?;
     println!("packet length: {:?}", _len);
     println!("packet id: {:?}", packet_id);
-    
+
     match packet_id {
         // Handshake
         0x00 => {
-            // let version = read_var_int(&mut reader);
-            println!("packet: handshake");
-        },
+            let version = read_var_int(&mut reader)?;
+            println!("packet: handshake, protocol version: {:?}", version);
+        }
         // othors
-        _ => {},
+        _ => println!("unknown packet: {}", packet_id),
     }
 
     Ok(())
