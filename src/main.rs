@@ -1,18 +1,30 @@
 use std::io;
-use std::io::Read;
+use std::io::{Read, BufReader};
 use std::net::{TcpListener, TcpStream};
 
-fn handler(mut stream: &TcpStream) -> io::Result<()> {
-    let mut buf = [0; 1024];
+// TODO: support multibyte int
+fn read_var_int(reader: &mut BufReader<&TcpStream>) -> io::Result<i32> {
+    let mut buf = [0];
+    reader.read_exact(&mut buf)?;
+    Ok(buf[0] as i32)
+}
 
-    loop {
-        println!("read");
-        let n = stream.read(&mut buf)?;
-        println!("{:?}", &buf[0..128]);
-        if n == 0 {
-            println!("end");
-            break;
-        }
+fn handler(stream: &TcpStream) -> io::Result<()> {
+    let mut reader = BufReader::new(stream);
+
+    let _len = read_var_int(&mut reader)?;
+    let packet_id = read_var_int(&mut reader)?;
+    println!("packet length: {:?}", _len);
+    println!("packet id: {:?}", packet_id);
+    
+    match packet_id {
+        // Handshake
+        0x00 => {
+            // let version = read_var_int(&mut reader);
+            println!("packet: handshake");
+        },
+        // othors
+        _ => {},
     }
 
     Ok(())
