@@ -1,16 +1,11 @@
 mod reader;
 
 use std::io;
-use std::io::BufReader;
+use std::io::{Read, BufReader};
 use std::net::{TcpListener, TcpStream};
 
-fn handler(stream: &TcpStream) -> io::Result<()> {
-    let mut reader = BufReader::new(stream);
-
-    let _len = reader::read_var_int(&mut reader)?;
+fn packet_handler<R: Read>(mut reader: R) -> io::Result<()> {
     let packet_id = reader::read_var_int(&mut reader)?;
-    println!("packet length: {:?}", _len);
-    println!("packet id: {:?}", packet_id);
 
     match packet_id {
         // Handshake
@@ -30,6 +25,18 @@ fn handler(stream: &TcpStream) -> io::Result<()> {
     }
 
     Ok(())
+}
+
+fn handler(stream: &TcpStream) -> io::Result<()> {
+    let mut reader = BufReader::new(stream);
+
+    loop {
+        let len = reader::read_var_int(&mut reader)?;
+        println!("packet length: {:?}", len);
+        let mut packet = vec![0; len as usize];
+        reader.read_exact(&mut packet)?;
+        packet_handler(packet.as_slice())?;
+    }
 }
 
 fn main() {
