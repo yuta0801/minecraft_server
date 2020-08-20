@@ -42,3 +42,51 @@ pub fn read_unsigned_short<R: Read>(reader: &mut R) -> io::Result<u16> {
     reader.read_exact(&mut buf)?;
     Ok(((buf[0] as u16) << 8) + buf[1] as u16)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn read_var_int_success() {
+        fn test_read_var_int(bytes: &[u8], expected: i32) {
+            let mut reader: &[u8] = bytes;
+            assert_eq!(read_var_int(&mut reader).unwrap(), expected);
+        }
+
+        test_read_var_int(&[0x00], 0);
+        test_read_var_int(&[0x01], 1);
+        test_read_var_int(&[0x02], 2);
+        test_read_var_int(&[0x7f], 127);
+        test_read_var_int(&[0x80, 0x01], 128);
+        test_read_var_int(&[0xff, 0x01], 255);
+
+        // not suppoeted
+        // test_read_var_int(&[0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x07], 2147483647);
+        // test_read_var_int(&[0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x0f], -1);
+        // test_read_var_int(&[0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x08], -2147483648);
+    }
+
+    #[test]
+    fn read_string_success() {
+        fn test_read_string(bytes: &[u8], expected: String) {
+            let mut reader: &[u8] = bytes;
+            assert_eq!(read_string(&mut reader).unwrap().unwrap(), expected);
+        }
+
+        test_read_string(&[4, 116, 101, 115, 116], "test".to_string())
+    }
+
+    #[test]
+    fn read_unsigned_short_success() {
+        fn test_read_unsigned_short(bytes: &[u8], expected: u16) {
+            let mut reader: &[u8] = bytes;
+            assert_eq!(read_unsigned_short(&mut reader).unwrap(), expected);
+        }
+
+        test_read_unsigned_short(&[0u8, 0u8], 0);
+        test_read_unsigned_short(&[0u8, 0x1u8], 1);
+        test_read_unsigned_short(&[0u8, 0xffu8], 255);
+        test_read_unsigned_short(&[0xffu8, 0xffu8], 65535);
+    }
+}
